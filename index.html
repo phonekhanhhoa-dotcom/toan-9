@@ -120,7 +120,7 @@
         }
 
         async function fetchQuestions() {
-            if(SCRIPT_URL === "DÁN_LINK_EXEC_VÀO_ĐÂY") {
+            if(SCRIPT_URL === "https://script.google.com/macros/s/AKfycbydlV0AqOPe8VhMlyIbqbHPgMo8sXClU-vNUzaH225N00YjFtwvM0sAS1zI_khutXvwHg/exec") {
                 alert("LỖI: Bạn chưa thay thế SCRIPT_URL trong file index.html");
                 return;
             }
@@ -267,7 +267,7 @@
         }
 
         async function showLeaderboard(category) {
-            if(SCRIPT_URL === "DÁN_LINK_EXEC_VÀO_ĐÂY") return;
+            if(SCRIPT_URL === "https://script.google.com/macros/s/AKfycbydlV0AqOPe8VhMlyIbqbHPgMo8sXClU-vNUzaH225N00YjFtwvM0sAS1zI_khutXvwHg/exec") return;
             document.getElementById("leaderboard-modal").classList.remove("hidden");
             document.getElementById("lb-loading").classList.remove("hidden");
             document.getElementById("lb-list").innerHTML = "";
