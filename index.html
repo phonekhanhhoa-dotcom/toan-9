@@ -1,0 +1,422 @@
+Dưới đây là 2 đoạn mã hoàn chỉnh để xây dựng **Web Game "Đấu Trường Toán 9"** với các chủ đề trọng tâm như Hệ thức Vi-ét, Tứ giác nội tiếp và Bất đẳng thức Cô-si. Giao diện được tích hợp sẵn thư viện MathJax để hiển thị công thức Toán học chuẩn xác và sử dụng Tailwind CSS để tối ưu hiển thị trên điện thoại.
+
+### ĐOẠN MÃ 1: File `Mã.gs` (Dành cho Google Apps Script)
+
+Copy toàn bộ đoạn mã này dán vào Apps Script của Google Sheet. Hệ thống sẽ tự động cung cấp ngân hàng câu hỏi, lưu điểm và xuất Bảng xếp hạng.
+
+```javascript
+const questions = [
+  {
+    category: "Đại số 9",
+    question: "Cho phương trình $x^2 - 5x + 6 = 0$. Theo hệ thức Vi-ét, tổng hai nghiệm $x_1 + x_2$ bằng bao nhiêu?",
+    options: ["5", "-5", "6", "-6"],
+    correct: 0,
+    explanation: "Theo hệ thức Vi-ét, tổng hai nghiệm $x_1 + x_2 = -\\frac{b}{a} = -\\frac{-5}{1} = 5$."
+  },
+  {
+    category: "Hình học 9",
+    question: "Trong một tứ giác nội tiếp đường tròn, tổng số đo hai góc đối diện bằng bao nhiêu?",
+    options: ["$180^\\circ$", "$360^\\circ$", "$90^\\circ$", "$270^\\circ$"],
+    correct: 0,
+    explanation: "Tính chất cơ bản của tứ giác nội tiếp là tổng hai góc đối luôn bằng $180^\\circ$."
+  },
+  {
+    category: "Đại số 9",
+    question: "Bất đẳng thức Cô-si (AM-GM) cho hai số thực không âm $a, b$ được phát biểu thế nào?",
+    options: ["$a + b \\ge 2\\sqrt{ab}$", "$a + b \\le 2\\sqrt{ab}$", "$a^2 + b^2 \\ge 2ab$", "$a + b > 2\\sqrt{ab}$"],
+    correct: 0,
+    explanation: "Trung bình cộng của hai số không âm luôn lớn hơn hoặc bằng trung bình nhân của chúng: $\\frac{a+b}{2} \\ge \\sqrt{ab} \\Leftrightarrow a + b \\ge 2\\sqrt{ab}$."
+  },
+  {
+    category: "Đại số 9",
+    question: "Điều kiện để phương trình bậc hai $ax^2 + bx + c = 0$ ($a \\neq 0$) có nghiệm kép là gì?",
+    options: ["$\\Delta = 0$", "$\\Delta > 0$", "$\\Delta < 0$", "$\\Delta \\ge 0$"],
+    correct: 0,
+    explanation: "Phương trình bậc hai có nghiệm kép khi và chỉ khi biệt thức $\\Delta = 0$ (hoặc $\\Delta' = 0$)."
+  },
+  {
+    category: "Hình học 9",
+    question: "Công thức tính diện tích hình quạt tròn bán kính $R$, cung $n^\\circ$ là:",
+    options: ["$S = \\frac{\\pi R^2 n}{360}$", "$S = \\frac{\\pi R n}{180}$", "$S = 2\\pi R$", "$S = \\pi R^2$"],
+    correct: 0,
+    explanation: "Diện tích hình quạt tròn tỉ lệ thuận với số đo cung: $S = \\frac{\\pi R^2 n}{360}$."
+  }
+];
+
+function doGet(e) {
+  let action = e.parameter.action;
+  let result = { status: "error", message: "Invalid action" };
+
+  if (action === "getQuestions") {
+    result = { status: "success", data: questions };
+  } 
+  else if (action === "saveScore") {
+    let sheetName = e.parameter.category || "Chung";
+    let ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName(sheetName);
+    
+    if (!sheet) {
+      sheet = ss.insertSheet(sheetName);
+      sheet.appendRow(["Thời gian nộp", "Họ và tên", "Lớp", "Điểm số", "Tỷ lệ đúng", "Combo tối đa", "Danh hiệu"]);
+      sheet.getRange("A1:G1").setFontWeight("bold").setBackground("#d9ead3");
+    }
+    
+    let rowData = [
+      new Date().toLocaleString("vi-VN"),
+      e.parameter.name,
+      e.parameter.className,
+      Number(e.parameter.score),
+      e.parameter.correctRatio,
+      Number(e.parameter.maxCombo),
+      e.parameter.title
+    ];
+    sheet.appendRow(rowData);
+    result = { status: "success", message: "Saved" };
+  }
+  else if (action === "getLeaderboard") {
+    let sheetName = e.parameter.category || "Chung";
+    let ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName(sheetName);
+    
+    if (!sheet) {
+      result = { status: "success", data: [] };
+    } else {
+      let data = sheet.getDataRange().getValues();
+      if (data.length <= 1) {
+        result = { status: "success", data: [] };
+      } else {
+        let headers = data.shift();
+        let records = data.map(row => ({
+          name: row[1],
+          className: row[2],
+          score: row[3],
+          maxCombo: row[5]
+        }));
+        
+        // Sắp xếp: Điểm cao xếp trước, nếu bằng điểm thì Combo cao xếp trước
+        records.sort((a, b) => b.score - a.score || b.maxCombo - a.maxCombo);
+        result = { status: "success", data: records.slice(0, 10) };
+      }
+    }
+  }
+
+  return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+}
+
+```
+
+### ĐOẠN MÃ 2: File `index.html` (Dành cho GitHub Pages)
+
+Lưu ý: Thay thế `DÁN_LINK_EXEC_VÀO_ĐÂY` bằng link Web App của thầy để lưu kết quả về đúng file Sheet. Mã đã tích hợp sẵn hiệu ứng xáo trộn phương án, chuỗi Combo và xử lý hiển thị LaTeX Toán học.
+
+```html
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đấu Trường Toán 9</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body class="bg-gray-100 font-sans antialiased text-gray-800">
+
+    <!-- KHU VỰC THAY LINK GOOGLE SHEET (WEB APP URL) -->
+    <script>
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZeUi2anOTzjifr979uy1li5r6KIj8B56n1CD-IAxFuNUZweUSSnO15A79dTRgqXkr1Q/exec";
+    </script>
+
+    <div id="app" class="max-w-md mx-auto min-h-screen bg-white shadow-lg overflow-hidden flex flex-col relative">
+        <!-- Header -->
+        <header class="bg-blue-600 text-white text-center py-4 shadow-md">
+            <h1 class="text-2xl font-bold uppercase">Đấu Trường Toán 9</h1>
+        </header>
+
+        <!-- Màn hình chính (Đăng nhập) -->
+        <div id="login-screen" class="p-6 flex-1 flex flex-col justify-center">
+            <div class="mb-4">
+                <label class="block text-sm font-semibold mb-1">Họ và tên học sinh:</label>
+                <input type="text" id="student-name" placeholder="Ví dụ: Nguyễn Văn A" class="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="mb-6">
+                <label class="block text-sm font-semibold mb-1">Lớp:</label>
+                <input type="text" id="student-class" placeholder="Ví dụ: 9B6" class="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <p class="text-center font-bold mb-3 text-gray-700">Chọn phần thi:</p>
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <button onclick="startGame('Đại số 9')" class="bg-indigo-500 text-white py-3 rounded-lg font-bold shadow hover:bg-indigo-600 transition">Đại Số 9</button>
+                <button onclick="startGame('Hình học 9')" class="bg-green-500 text-white py-3 rounded-lg font-bold shadow hover:bg-green-600 transition">Hình Học 9</button>
+            </div>
+            <button onclick="showLeaderboard('Chung')" class="w-full bg-yellow-500 text-white py-3 rounded-lg font-bold shadow hover:bg-yellow-600 transition">🏆 Xem Bảng Xếp Hạng</button>
+            <p id="login-error" class="text-red-500 text-center text-sm mt-3 hidden">Vui lòng điền đủ Họ tên và Lớp!</p>
+        </div>
+
+        <!-- Màn hình thi đấu -->
+        <div id="game-screen" class="p-4 flex-1 flex flex-col hidden">
+            <div class="flex justify-between items-center mb-4 bg-gray-50 p-3 rounded-lg shadow-sm">
+                <div>
+                    <span class="text-xs text-gray-500 block">Điểm số</span>
+                    <span id="score-display" class="font-bold text-xl text-blue-600">0</span>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs text-gray-500 block">Combo</span>
+                    <span id="combo-display" class="font-bold text-xl text-orange-500">0 🔥</span>
+                </div>
+            </div>
+            
+            <div class="w-full bg-gray-200 rounded-full h-2 mb-6">
+                <div id="progress-bar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+
+            <div id="question-container" class="flex-1">
+                <h2 id="question-text" class="text-lg font-semibold mb-6">Đang tải câu hỏi...</h2>
+                <div id="options-container" class="space-y-3">
+                    <!-- Options will be generated here -->
+                </div>
+            </div>
+
+            <div id="explanation-box" class="mt-4 p-4 bg-blue-50 text-blue-800 text-sm rounded-lg hidden"></div>
+            
+            <button id="next-btn" onclick="nextQuestion()" class="w-full bg-blue-600 text-white py-3 mt-6 rounded-lg font-bold shadow hidden">Câu Tiếp Theo ➔</button>
+        </div>
+
+        <!-- Màn hình kết quả -->
+        <div id="result-screen" class="p-6 flex-1 flex flex-col justify-center items-center text-center hidden">
+            <h2 class="text-3xl font-bold mb-2">Hoàn thành!</h2>
+            <p class="text-gray-600 mb-6">Bạn đã hoàn thành bài thi môn <span id="res-category" class="font-bold"></span></p>
+            
+            <div class="bg-gray-50 w-full p-4 rounded-xl shadow-inner mb-6">
+                <p class="text-lg">Tổng điểm: <span id="res-score" class="font-bold text-blue-600 text-2xl">0</span></p>
+                <p class="text-sm text-gray-600 mt-2">Số câu đúng: <span id="res-correct" class="font-bold">0</span></p>
+                <p class="text-sm text-gray-600 mt-1">Combo cao nhất: <span id="res-combo" class="font-bold text-orange-500">0 🔥</span></p>
+            </div>
+            
+            <p id="res-title" class="text-xl font-extrabold text-yellow-600 mb-8 uppercase"></p>
+            
+            <p id="saving-status" class="text-sm text-blue-500 mb-4 animate-pulse">Đang lưu kết quả...</p>
+            
+            <button onclick="location.reload()" class="w-full bg-gray-200 text-gray-800 py-3 rounded-lg font-bold shadow hover:bg-gray-300 transition">Về Màn Hình Chính</button>
+        </div>
+
+        <!-- Modal Bảng Xếp Hạng -->
+        <div id="leaderboard-modal" class="absolute inset-0 bg-white z-50 flex flex-col hidden">
+            <header class="bg-yellow-500 text-white text-center py-4 shadow-md flex justify-between px-4 items-center">
+                <h1 class="text-xl font-bold">🏆 TOP 10 CAO THỦ</h1>
+                <button onclick="document.getElementById('leaderboard-modal').classList.add('hidden')" class="text-2xl">&times;</button>
+            </header>
+            <div class="p-4 overflow-y-auto flex-1">
+                <p id="lb-loading" class="text-center text-gray-500 mt-10">Đang tải dữ liệu...</p>
+                <ul id="lb-list" class="space-y-2"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allQuestions = [];
+        let currentQuestions = [];
+        let currentIdx = 0;
+        let score = 0;
+        let combo = 0;
+        let maxCombo = 0;
+        let correctAnswers = 0;
+        let student = { name: "", className: "", category: "" };
+
+        // Xáo trộn mảng
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        async function fetchQuestions() {
+            if(SCRIPT_URL === "DÁN_LINK_EXEC_VÀO_ĐÂY") {
+                alert("LỖI: Bạn chưa thay thế SCRIPT_URL trong file index.html");
+                return;
+            }
+            try {
+                let res = await fetch(SCRIPT_URL + "?action=getQuestions");
+                let data = await res.json();
+                allQuestions = data.data;
+            } catch (e) {
+                alert("Lỗi tải dữ liệu. Vui lòng kiểm tra lại kết nối mạng.");
+            }
+        }
+
+        async function startGame(category) {
+            let name = document.getElementById("student-name").value.trim();
+            let className = document.getElementById("student-class").value.trim();
+            if(!name || !className) {
+                document.getElementById("login-error").classList.remove("hidden");
+                return;
+            }
+            student = { name, className, category };
+            
+            if(allQuestions.length === 0) {
+                document.getElementById("login-error").innerText = "Đang tải dữ liệu, vui lòng chờ...";
+                document.getElementById("login-error").classList.remove("hidden");
+                await fetchQuestions();
+            }
+
+            // Lọc câu hỏi theo chủ đề và xáo trộn
+            currentQuestions = shuffle(allQuestions.filter(q => q.category === category));
+            if(currentQuestions.length === 0) currentQuestions = shuffle(allQuestions); // fallback nếu không khớp category
+
+            document.getElementById("login-screen").classList.add("hidden");
+            document.getElementById("game-screen").classList.remove("hidden");
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            if (currentIdx >= currentQuestions.length) {
+                endGame();
+                return;
+            }
+
+            let q = currentQuestions[currentIdx];
+            document.getElementById("question-text").innerHTML = `Câu ${currentIdx + 1}: ${q.question}`;
+            document.getElementById("progress-bar").style.width = `${(currentIdx / currentQuestions.length) * 100}%`;
+            
+            // Xáo trộn phương án và giữ vết đáp án đúng
+            let opts = q.options.map((text, idx) => ({ text, isCorrect: idx === q.correct }));
+            shuffle(opts);
+
+            let optionsHtml = opts.map((opt, i) => `
+                <button onclick="checkAnswer(this, ${opt.isCorrect}, '${q.explanation.replace(/'/g, "\\'")}')" 
+                        class="opt-btn w-full text-left p-4 border-2 border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition duration-200 font-medium">
+                    ${opt.text}
+                </button>
+            `).join("");
+
+            document.getElementById("options-container").innerHTML = optionsHtml;
+            document.getElementById("explanation-box").classList.add("hidden");
+            document.getElementById("next-btn").classList.add("hidden");
+
+            // Cập nhật lại giao diện Toán học
+            if (window.MathJax) MathJax.typesetPromise();
+        }
+
+        function checkAnswer(btn, isCorrect, explanation) {
+            let btns = document.querySelectorAll(".opt-btn");
+            btns.forEach(b => b.disabled = true);
+
+            if (isCorrect) {
+                btn.classList.replace("border-gray-200", "border-green-500");
+                btn.classList.replace("hover:bg-blue-50", "bg-green-100");
+                score += 10;
+                combo++;
+                correctAnswers++;
+                if (combo >= 3) score += 20; // Thưởng combo
+                if (combo > maxCombo) maxCombo = combo;
+            } else {
+                btn.classList.replace("border-gray-200", "border-red-500");
+                btn.classList.replace("hover:bg-blue-50", "bg-red-100");
+                combo = 0;
+                // Hiển thị đáp án đúng
+                btns.forEach(b => {
+                    if(b.onclick.toString().includes('true')) {
+                        b.classList.replace("border-gray-200", "border-green-500");
+                        b.classList.add("bg-green-50");
+                    }
+                });
+            }
+
+            document.getElementById("score-display").innerText = score;
+            document.getElementById("combo-display").innerText = `${combo} 🔥`;
+            
+            let expBox = document.getElementById("explanation-box");
+            expBox.innerHTML = `<strong>Giải thích:</strong> <br> ${explanation}`;
+            expBox.classList.remove("hidden");
+            document.getElementById("next-btn").classList.remove("hidden");
+            
+            if (window.MathJax) MathJax.typesetPromise();
+        }
+
+        function nextQuestion() {
+            currentIdx++;
+            renderQuestion();
+        }
+
+        async function endGame() {
+            document.getElementById("game-screen").classList.add("hidden");
+            document.getElementById("result-screen").classList.remove("hidden");
+            
+            let title = "Tân Binh";
+            let ratio = correctAnswers / currentQuestions.length;
+            if(ratio === 1) title = "Thiên Tài Toán Học 🏆";
+            else if(ratio >= 0.8) title = "Thủ Khoa 🥇";
+            else if(ratio >= 0.5) title = "Học Sinh Khá 🥈";
+
+            document.getElementById("res-category").innerText = student.category;
+            document.getElementById("res-score").innerText = score;
+            document.getElementById("res-correct").innerText = `${correctAnswers}/${currentQuestions.length}`;
+            document.getElementById("res-combo").innerText = `${maxCombo} 🔥`;
+            document.getElementById("res-title").innerText = title;
+
+            // Lưu điểm
+            let params = new URLSearchParams({
+                action: "saveScore",
+                category: student.category,
+                name: student.name,
+                className: student.className,
+                score: score,
+                correctRatio: `${correctAnswers}/${currentQuestions.length}`,
+                maxCombo: maxCombo,
+                title: title
+            });
+
+            try {
+                await fetch(SCRIPT_URL + "?" + params.toString());
+                document.getElementById("saving-status").innerText = "✅ Đã lưu kết quả thành công!";
+                document.getElementById("saving-status").classList.replace("text-blue-500", "text-green-600");
+                document.getElementById("saving-status").classList.remove("animate-pulse");
+            } catch (e) {
+                document.getElementById("saving-status").innerText = "❌ Không thể lưu kết quả. Vui lòng thử lại.";
+                document.getElementById("saving-status").classList.replace("text-blue-500", "text-red-500");
+            }
+        }
+
+        async function showLeaderboard(category) {
+            if(SCRIPT_URL === "DÁN_LINK_EXEC_VÀO_ĐÂY") return;
+            document.getElementById("leaderboard-modal").classList.remove("hidden");
+            document.getElementById("lb-loading").classList.remove("hidden");
+            document.getElementById("lb-list").innerHTML = "";
+            
+            try {
+                let res = await fetch(SCRIPT_URL + `?action=getLeaderboard&category=${category}`);
+                let data = await res.json();
+                
+                document.getElementById("lb-loading").classList.add("hidden");
+                
+                if(data.data.length === 0) {
+                    document.getElementById("lb-list").innerHTML = "<p class='text-center text-gray-500'>Chưa có bảng điểm nào.</p>";
+                    return;
+                }
+
+                let medals = ["🥇", "🥈", "🥉"];
+                document.getElementById("lb-list").innerHTML = data.data.map((p, i) => `
+                    <li class="flex justify-between items-center bg-gray-50 p-3 rounded-lg border shadow-sm">
+                        <div class="flex items-center gap-3">
+                            <span class="text-xl w-6 text-center font-bold">${medals[i] || (i+1)}</span>
+                            <div>
+                                <p class="font-bold text-sm">${p.name} <span class="text-xs text-gray-500 font-normal">(${p.className})</span></p>
+                                <p class="text-xs text-orange-500">Combo: ${p.maxCombo} 🔥</p>
+                            </div>
+                        </div>
+                        <span class="font-black text-blue-600">${p.score} đ</span>
+                    </li>
+                `).join("");
+            } catch (e) {
+                document.getElementById("lb-loading").innerText = "Lỗi tải bảng xếp hạng.";
+            }
+        }
+        
+        // Pre-fetch questions on load
+        fetchQuestions();
+    </script>
+</body>
+</html>
+
+```
